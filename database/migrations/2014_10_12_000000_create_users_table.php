@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('phone_number')->unique();
             $table->string('google_id')->unique();
             $table->integer('point');
-            $table->enum('name', ['user', 'admin', 'merchant'])->default('user');
+            $table->enum('role', ['user', 'admin', 'merchant'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->rememberToken();
