@@ -25,14 +25,20 @@ class WhatsAppController extends Controller
             $from = $request->input('From');
             $body = $request->input('Body');
             $mediaUrl = $request->input('MediaUrl0'); // URL media jika ada gambar
+            $latitude = $request->input('Latitude'); // Latitude dari lokasi jika ada
+            $longitude = $request->input('Longitude'); // Longitude dari lokasi jika ada
 
             // Log input data
-            Log::info('Received message', ['from' => $from, 'body' => $body, 'mediaUrl' => $mediaUrl]);
+            Log::info('Received message', ['from' => $from, 'body' => $body, 'mediaUrl' => $mediaUrl, 'latitude' => $latitude, 'longitude' => $longitude]);
 
             $responseMessage = 'Data Anda telah diterima.';
 
+            // Jika ada lokasi, ambil koordinatnya
+            if ($latitude && $longitude) {
+                $responseMessage = "Koordinat lokasi yang Anda kirim adalah:\nLatitude: $latitude\nLongitude: $longitude";
+            }
             // Jika ada gambar, lakukan OCR
-            if ($mediaUrl) {
+            elseif ($mediaUrl) {
                 $imageContent = $this->downloadMedia($mediaUrl);
                 if ($imageContent === false) {
                     throw new \Exception('Failed to download media');

@@ -12,7 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('merchant_locations', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('guid')->primary();
+            $table->string('name');
+            $table->string('country');
+            $table->string('city');
+            $table->decimal('latitude', 10, 8);
+            $table->decimal('longitude', 11, 8);
+            $table->string('phone_number')->nullable();
+            $table->char('merchant_master_guid', 36)->index();
+            $table->foreign('merchant_master_guid')->references('guid')->on('merchant_masters')->onDelete('cascade');
             $table->timestamps();
         });
     }

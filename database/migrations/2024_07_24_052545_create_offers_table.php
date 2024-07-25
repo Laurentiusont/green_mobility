@@ -11,17 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('offers', function (Blueprint $table) {
             $table->uuid('guid')->primary();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->string('phone_number')->unique();
-            $table->string('google_id')->unique();
+            $table->integer('stock');
             $table->integer('point');
-            $table->enum('name', ['user', 'admin', 'merchant'])->default('user');
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password')->nullable();
-            $table->rememberToken();
+            $table->longText('description');
+            $table->char('merchant_master_guid', 36)->index();
+            $table->foreign('merchant_master_guid')->references('guid')->on('merchant_masters')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -31,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('offers');
     }
 };

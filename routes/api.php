@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CarbonController;
 use App\Http\Controllers\Api\OCRController;
 use App\Http\Controllers\Api\PasswordController;
 use App\Http\Controllers\Api\ProfileController;
@@ -62,4 +63,11 @@ Route::group([
     // 'middleware' => 'jwt.verify',
 ], function ($router) {
     $router->post('/ocr/upload', [OCRController::class, 'upload']);
+});
+
+Route::group([
+    'prefix' => $url,
+    // 'middleware' => 'jwt.verify',
+], function ($router) {
+    $router->post('/carbon-footprint', [CarbonController::class, 'calculateCarbonFootprint']);
 });
