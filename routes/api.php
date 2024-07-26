@@ -10,6 +10,7 @@ use App\Http\Controllers\JarInputController;
 use App\Http\Controllers\ParkingLotController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserFormController;
+use App\Http\Controllers\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -141,3 +142,12 @@ Route::group([
     $router->delete('/parkinglot/{guid}', [ParkingLotController::class, 'deleteData']);
 });
 
+/**
+ * WhatsApp CONTROLLER
+ */
+Route::group([
+    'prefix' => $url,
+    // 'middleware' => 'jwt.verify',
+], function ($router) {
+    $router->post('/webhook', [WhatsAppController::class, 'handleWebhook']);
+});

@@ -85,22 +85,18 @@ class AuthController extends Controller
             'google_id' => 'required|string',
             'name' => 'required|string',
             'email' => 'required|string',
-            'guid' => 'required|string|max:36',
         ], MessagesController::messages());
 
         if ($validator->fails()) {
             return ResponseController::getResponse(null, 422, $validator->errors()->first());
         }
 
-        $user = User::where('guid', $request['guid'])->first();
-        if ($request['email'] != $user['email']) {
-            return ResponseController::getResponse(null, 400, "Email Google are Different");
-        }
-
-        $user->email = $request['email'];
-        $user->google_id = $request['google_id'];
-        $user->email_verified_at = Carbon::now();
-        $user->save();
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            // 'phone_number' => $request->phone_number,
+            'google_id' => $request->google_id,
+        ]);
 
 
         return ResponseController::getResponse($user, 200, 'Verify Success');
@@ -108,52 +104,64 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-        ], MessagesController::messages());
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email|exists:users,email',
+                'password' => 'nullable|string|min:6',
+            ], MessagesController::messages());
 
-        if ($validator->fails()) {
-            return ResponseController::getResponse(null, 422, $validator->errors()->first());
+            if ($validator->fails()) {
+                return ResponseController::getResponse(null, 422, $validator->errors()->first());
+            }
+
+            $response = null;
+
+            $user = User::where('email', $request->get('email'))->first();
+
+            if (empty($user)) {
+                return ResponseController::getResponse(null, 400, "User Not Found");
+            }
+
+            if ($user->google_id) {
+                $response = true;
+            }
+
+            if ($request->get('password')) {
+
+                if (!Hash::check($request->get('password'), $user->password)) {
+                    return ResponseController::getResponse(null, 400, "Invalid Credentials");
+                }
+
+                if (empty($user->email_verified_at)) {
+                    return ResponseController::getResponse(null, 400, "Email Not Verified");
+                }
+
+                $payloadable = [
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                ];
+
+                $token = JWTAuth::fromUser($user, $payloadable);
+
+                $response = [
+                    "access_token" => $token,
+                ];
+            }
+
+            return ResponseController::getResponse($response, 200, 'Login Success');
+        } catch (\Exception $e) {
+            return ResponseController::getResponse(null, 500, 'An unexpected error occurred: ' . $e->getMessage());
         }
-
-        $user = User::where([
-            ['users.email', '=', $request['email']],
-        ])
-            ->first();
-
-        if (empty($user)) {
-            return ResponseController::getResponse(null, 400, "User Not Found");
-        }
-
-        if (!Hash::check($request->get('password'), $user->password)) {
-            return ResponseController::getResponse(null, 400, "Invalid Credentials");
-        }
-
-        if (empty($user->email_verified_at)) {
-            return ResponseController::getResponse(null, 400, "Email Not Verify");
-        }
-        $payloadable = [
-            'user_id' => $user->id,
-            'name' => $user->name,
-            'username' => $user->username,
-            'email' => $user->email,
-        ];
-
-        $token = JWTAuth::fromUser($user, $payloadable);
-
-        $respone = [
-            "access_token" => $token,
-        ];
-
-        return ResponseController::getResponse($respone, 200, 'Login Success');
     }
+
     public function register(Request $request)
     {
-        
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users', 
+            'email' => 'required|string|email|max:255|unique:users',
             'phone_number' => 'required|string',
             'password' => 'required|string|min:6',
         ], MessagesController::messages());
