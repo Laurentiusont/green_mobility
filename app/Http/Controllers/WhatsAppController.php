@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\OCRService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Twilio\Rest\Client;
-use App\Models\UserState;
 
 class WhatsAppController extends Controller
 {
@@ -23,22 +23,24 @@ class WhatsAppController extends Controller
     {
         $from = $request->input('From');
         $body = trim($request->input('Body'));
-        $mediaUrl = $request->input('MediaUrl0');
-        $latitude = $request->input('Latitude');
-        $longitude = $request->input('Longitude');
 
-        Log::info('Received message', ['from' => $from, 'body' => $body, 'mediaUrl' => $mediaUrl, 'latitude' => $latitude, 'longitude' => $longitude]);
+        Log::info('Received message', ['from' => $from, 'body' => $body]);
 
-        $state = $this->getUserState($from);
+        if (!$this->isUserRegistered($from)) {
+            $this->sendMessage($from, 'Nomor Anda tidak terdaftar. Silakan daftar terlebih dahulu.');
+            return response()->json(['status' => 'user_not_registered']);
+        }
 
         if (strtolower($body) === 'menu') {
             $this->sendMenu($from);
-            $this->setUserState($from, null);
+            $this->setUserState($from, 'menu');
             return response()->json(['status' => 'success']);
         }
 
+        $state = $this->getUserState($from);
         switch ($state) {
             case 'awaiting_image':
+                $mediaUrl = $request->input('MediaUrl0');
                 if ($mediaUrl) {
                     $this->processOCR($from, $mediaUrl);
                 } else {
@@ -46,6 +48,8 @@ class WhatsAppController extends Controller
                 }
                 break;
             case 'awaiting_location':
+                $latitude = $request->input('Latitude');
+                $longitude = $request->input('Longitude');
                 if ($latitude && $longitude) {
                     $this->processParkingLocation($from, $latitude, $longitude);
                 } else {
@@ -119,127 +123,6 @@ class WhatsAppController extends Controller
         }
     }
 
-
-
-
-
-    // public function handleWebhook(Request $request)
-    // {
-    //     $from = $request->input('From');
-    //     $body = trim($request->input('Body'));
-    //     $mediaUrl = $request->input('MediaUrl0');
-    //     $latitude = $request->input('Latitude');
-    //     $longitude = $request->input('Longitude');
-
-    //     Log::info('Received message', ['from' => $from, 'body' => $body, 'mediaUrl' => $mediaUrl, 'latitude' => $latitude, 'longitude' => $longitude]);
-
-    //     $state = $this->getUserState($from);
-
-    //     if (strtolower($body) === 'menu') {
-    //         $this->sendMenu($from);
-    //         $this->setUserState($from, null);
-    //         return response()->json(['status' => 'success']);
-    //     }
-
-    //     switch ($state) {
-    //         case 'awaiting_image':
-    //             if ($mediaUrl) {
-    //                 $this->processOCR($from, $mediaUrl);
-    //             } else {
-    //                 $this->sendMessage($from, 'Silakan unggah gambar tanda terima untuk diproses oleh OCR.');
-    //             }
-    //             break;
-    //         case 'awaiting_location':
-    //             if ($latitude && $longitude) {
-    //                 $this->processParkingLocation($from, $latitude, $longitude);
-    //             } else {
-    //                 $this->sendMessage($from, 'Silakan bagikan lokasi Anda untuk mencari lahan parkir.');
-    //             }
-    //             break;
-    //         case 'carbon_calculator':
-    //             $this->handleCarbonCalculator($from, $body);
-    //             break;
-    //         default:
-    //             $this->handleMenuSelection($from, $body);
-    //             break;
-    //     }
-
-    //     return response()->json(['status' => 'success']);
-    // }
-
-    // private function handleMenuSelection($from, $body)
-    // {
-    //     switch ($body) {
-    //         case '1':
-    //             $this->sendCarbonCalculatorMenu($from);
-    //             $this->setUserState($from, 'carbon_calculator');
-    //             break;
-    //         case '2':
-    //             $this->sendMessage($from, 'Silakan unggah gambar tanda terima untuk diproses oleh OCR.');
-    //             $this->setUserState($from, 'awaiting_image');
-    //             break;
-    //         case '3':
-    //             $this->sendMessage($from, 'Silakan bagikan lokasi Anda untuk mencari lahan parkir.');
-    //             $this->setUserState($from, 'awaiting_location');
-    //             break;
-    //         default:
-    //             $this->sendMessage($from, 'Pilihan tidak valid. Ketik "menu" untuk melihat pilihan yang tersedia.');
-    //             break;
-    //     }
-    // }
-
-    // private function handleCarbonCalculator($from, $body)
-    // {
-    //     $parts = explode(' ', $body, 2);
-    //     if (count($parts) == 2) {
-    //         $vehicleType = strtolower($parts[0]);
-    //         $distance = floatval($parts[1]);
-
-    //         $carbonEmission = $this->calculateCarbonEmission($vehicleType, $distance);
-
-    //         if ($carbonEmission !== null) {
-    //             $this->sendMessage($from, "Estimasi emisi karbon untuk $vehicleType dengan jarak tempuh $distance km adalah $carbonEmission kg CO2.");
-    //         } else {
-    //             $this->sendMessage($from, 'Jenis kendaraan tidak valid. Pilih kendaraan dari menu.');
-    //         }
-    //     } else {
-    //         $this->sendMessage($from, 'Format tidak valid. Pilih jenis kendaraan dari menu dan ketik jarak tempuh dalam km.');
-    //     }
-    //     $this->setUserState($from, null);
-    // }
-
-    // private function calculateCarbonEmission($vehicleType, $distance)
-    // {
-    //     $emissionRates = [
-    //         'mobil_bensin' => 0.24,
-    //         'mobil_diesel' => 0.28,
-    //         'motor' => 0.1,
-    //         'bus' => 0.27,
-    //         'kereta' => 0.06 // Menambahkan kategori kendaraan baru
-    //     ];
-
-    //     if (array_key_exists($vehicleType, $emissionRates)) {
-    //         return $emissionRates[$vehicleType] * $distance;
-    //     } else {
-    //         return null;
-    //     }
-    // }
-
-    // private function sendCarbonCalculatorMenu($to)
-    // {
-    //     $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
-    //     $twilio->messages->create($to, [
-    //         'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-    //         'body' => "Pilih jenis kendaraan Anda:",
-    //         'persistentAction' => [
-    //             "mobil_bensin", "mobil_diesel", "motor", "bus", "kereta" // Menambahkan lebih banyak pilihan
-    //         ].map(function($type) {
-    //             return ["type" => "reply", "reply" => ["id" => $type, "title" => ucwords(str_replace('_', ' ', $type))]];
-    //         })
-    //     ]);
-    // }
-
-
     private function sendMenu($to)
     {
         $menuMessage = "Silakan pilih salah satu opsi berikut:\n1. Carbon Emission Calculator\n2. OCR Upload Receipt\n3. Mencari Lahan Parkir berdasarkan share lokasi";
@@ -255,65 +138,23 @@ class WhatsAppController extends Controller
         ]);
     }
 
-    private function processOCR($from, $mediaUrl)
+    private function isUserRegistered($phoneNumber)
     {
-        $imageContent = $this->downloadMedia($mediaUrl);
-        if ($imageContent === false) {
-            $this->sendMessage($from, 'Failed to download media');
-            $this->setUserState($from, null);
-            return;
-        }
-
-        $imagePath = 'uploads/' . uniqid() . '.jpg';
-        Storage::disk('public')->put($imagePath, $imageContent);
-        $fullImagePath = storage_path("app/public/{$imagePath}");
-
-        $ocrResult = $this->ocrService->recognizeText($fullImagePath);
-
-        if (!empty($ocrResult['responses'][0]['fullTextAnnotation']['text'])) {
-            $detectedText = $ocrResult['responses'][0]['fullTextAnnotation']['text'];
-            $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
-        } else {
-            $responseMessage = "Tidak ada teks yang terdeteksi pada gambar.";
-        }
-
-        $this->sendMessage($from, $responseMessage);
-        $this->setUserState($from, null);
-    }
-
-    private function processParkingLocation($from, $latitude, $longitude)
-    {
-        $responseMessage = "Koordinat lokasi yang Anda kirim adalah:\nLatitude: $latitude\nLongitude: $longitude\n(Implementasikan fungsi pencarian lahan parkir di sini)";
-        $this->sendMessage($from, $responseMessage);
-        $this->setUserState($from, null);
-    }
-
-    private function downloadMedia($mediaUrl)
-    {
-        try {
-            $response = Http::withBasicAuth(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'))->timeout(30)->get($mediaUrl);
-
-            if ($response->successful() && $response->header('Content-Type') !== 'application/xml') {
-                return $response->body();
-            } else {
-                throw new \Exception('Invalid media content type or request failed');
-            }
-        } catch (\Exception $e) {
-            Log::error('Error in downloadMedia', ['error' => $e->getMessage()]);
-            return false;
-        }
+        return User::where('phone_number', $phoneNumber)->exists();
     }
 
     private function getUserState($from)
     {
-        $userState = UserState::where('user_id', $from)->first();
-        return $userState ? $userState->state : null;
+        $user = User::where('phone_number', $from)->first();
+        return $user ? $user->status : null;
     }
 
     private function setUserState($from, $state)
     {
-        $userState = UserState::firstOrNew(['user_id' => $from]);
-        $userState->state = $state;
-        $userState->save();
+        $user = User::where('phone_number', $from)->first();
+        if ($user) {
+            $user->status = $state;
+            $user->save();
+        }
     }
 }
