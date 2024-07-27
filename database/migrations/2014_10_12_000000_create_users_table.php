@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('phone_number')->nullable();
             $table->string('country')->nullable();
-            $table->string('role');
+            $table->enum('role', ['user', 'admin', 'merchant'])->default('user');
             $table->enum('status', ['submitted', 'unsubmitted'])->default('unsubmitted');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();

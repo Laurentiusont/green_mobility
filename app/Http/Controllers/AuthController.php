@@ -81,26 +81,57 @@ class AuthController extends Controller
 
     public function verifyGoogle(Request $request)
     {
+        // Validasi input dari request
         $validator = Validator::make($request->all(), [
             'google_id' => 'required|string',
             'name' => 'required|string',
-            'email' => 'required|string',
+            'email' => 'required|string|email',
         ], MessagesController::messages());
 
+        // Jika validasi gagal, kembalikan respon dengan error
         if ($validator->fails()) {
             return ResponseController::getResponse(null, 422, $validator->errors()->first());
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            // 'phone_number' => $request->phone_number,
-            'google_id' => $request->google_id,
-        ]);
+        // Cari user berdasarkan email
+        $user = User::where('email', $request->input('email'))->first();
 
+        if ($user) {
+            // Jika user ditemukan dan google_id belum ada, update google_id
+            if (!$user->google_id) {
+                $user->google_id = $request->input('google_id');
+                $user->save();
+            }
+        } else {
+            // Jika user tidak ditemukan, buat user baru
+            $user = User::create([
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+                'google_id' => $request->input('google_id'),
+            ]);
 
-        return ResponseController::getResponse($user, 200, 'Verify Success');
+            // Jika pembuatan user baru gagal, kembalikan respon dengan error
+            if (!$user) {
+                return ResponseController::getResponse(null, 500, 'User creation failed');
+            }
+        }
+
+        $payloadable = [
+            'user_guid' => $user->guid,
+            'name' => $user->name,
+            'email' => $user->email,
+        ];
+
+        $token = JWTAuth::fromUser($user, $payloadable);
+
+        $response = [
+            "access_token" => $token,
+        ];
+
+        // Kembalikan respon sukses dengan data user
+        return ResponseController::getResponse($response, 200, 'Verify Success');
     }
+
 
     public function login(Request $request)
     {

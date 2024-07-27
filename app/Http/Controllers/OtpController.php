@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+// use App\Http\Controllers\Controller;
 use App\Http\Controllers\MessagesController;
 use App\Http\Controllers\ResponseController;
 use App\Models\Otp;
@@ -88,78 +88,91 @@ class OtpController extends Controller
 
     public function verificationOtp(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'guid' => 'required|string|max:36',
-        ], MessagesController::messages());
+        try {
+            // Validate the request
+            $validator = Validator::make($request->all(), [
+                'guid' => 'required|string|max:36',
+            ], MessagesController::messages());
 
-        if ($validator->fails()) {
-            return ResponseController::getResponse(null, 422, $validator->errors()->first());
-        }
-
-        $user = User::where('guid', $request->get('guid'))
-            ->first();
-
-        if ($user === null) {
-            return ResponseController::getResponse(null, 404, 'User Not Found');
-        }
-
-        $otpObj = Otp::where('user_guid',  $request->get('guid'))
-            ->first();
-        if ($otpObj === null) {
-            try {
-                $otp = random_int(100000, 999999);
-            } catch (Exception $e) {
-                return ResponseController::getResponse($e->getMessage(), 500, 'Internal Server Error');
+            if ($validator->fails()) {
+                return ResponseController::getResponse(null, 422, $validator->errors()->first());
             }
-            /// INSERT DATA TO DB
-            $data = Otp::create([
-                'user_guid' => $user->guid,
-                'otp' => $otp,
-            ]);
-        } else {
-            $otp = $otpObj->otp;
-        }
 
-        $verificationUrl = 'http://127.0.0.1:8000/verify/' . $user->guid . '/' . $otp;
-        $firstname = strtok($user->name, " ");
-        $mj = new Client(
-            env('MAILJET_API_KEY'),
-            env('MAILJET_SECRET_KEY'),
-            true,
-            ['version' => 'v3.1']
-        );
-        $body = [
-            'Messages' => [
-                [
-                    'From' => [
-                        'Email' => '2172028@maranatha.ac.id',
-                        'Name' => 'Surpay'
-                    ],
-                    'To' => [
-                        [
-                            'Email' => $user->email,
-                            'Name' => $user->name
+            // Find the user by GUID
+            $user = User::where('guid', $request->get('guid'))->first();
+
+            if ($user === null) {
+                return ResponseController::getResponse(null, 404, 'User Not Found');
+            }
+
+            // Check if OTP already exists for the user
+            $otpObj = Otp::where('user_guid', $request->get('guid'))->first();
+            if ($otpObj === null) {
+                try {
+                    $otp = random_int(100000, 999999);
+                } catch (Exception $e) {
+                    Log::error('Error generating OTP: ' . $e->getMessage());
+                    return ResponseController::getResponse($e->getMessage(), 500, 'Internal Server Error');
+                }
+
+                // Insert new OTP into the database
+                $data = Otp::create([
+                    'user_guid' => $user->guid,
+                    'otp' => $otp,
+                ]);
+            } else {
+                $otp = $otpObj->otp;
+                $data = $otpObj; // To return the existing OTP object for consistency
+            }
+
+            // Prepare the email
+            $verificationUrl = 'http://127.0.0.1:8000/verify/' . $user->guid . '/' . $otp;
+            $firstname = strtok($user->name, " ");
+            $mj = new Client(
+                env('MAILJET_API_KEY'),
+                env('MAILJET_SECRET_KEY'),
+                true,
+                ['version' => 'v3.1']
+            );
+            $body = [
+                'Messages' => [
+                    [
+                        'From' => [
+                            'Email' => '2172028@maranatha.ac.id',
+                            'Name' => 'Surpay'
+                        ],
+                        'To' => [
+                            [
+                                'Email' => $user->email,
+                                'Name' => $user->name
+                            ]
+                        ],
+                        'TemplateID' => 5964497,
+                        'TemplateLanguage' => true,
+                        'Subject' => 'Verify Email',
+                        'Variables' => [
+                            'title' => 'Email Verification',
+                            'firstname' => $firstname,
+                            'content' => 'Please click the link below to verify your email address:',
+                            'verification_url' => $verificationUrl
                         ]
-                    ],
-                    'TemplateID' => 5964497,
-                    'TemplateLanguage' => true,
-                    'Subject' => 'Verify Email',
-                    'Variables' => json_decode('{
-                            "title": "Email Verification",
-                            "firstname": "' . $firstname . '",
-                            "content": "Please click the link below to verify your email address:",
-                            "verification_url" :"' . $verificationUrl . '"
-                          }', true)
+                    ]
                 ]
-            ]
-        ];
-        $response = $mj->post(Resources::$Email, ['body' => $body]);
+            ];
 
-        if (!$response->success()) {
-            return ResponseController::getResponse($response->getData(), $response->getStatus(), $response->getReasonPhrase());
+            // Send the email
+            $response = $mj->post(Resources::$Email, ['body' => $body]);
+
+            if (!$response->success()) {
+                Log::error('Error sending email: ' . $response->getReasonPhrase());
+                return ResponseController::getResponse($response->getData(), $response->getStatus(), $response->getReasonPhrase());
+            }
+
+            return ResponseController::getResponse($data, 200, 'Success');
+        } catch (Exception $e) {
+            Log::error('An unexpected error occurred: ' . $e->getMessage());
+            return ResponseController::getResponse($e->getMessage(), 500, 'An unexpected error occurred');
         }
-
-        return ResponseController::getResponse($data, 200, 'Success');
     }
 
 
