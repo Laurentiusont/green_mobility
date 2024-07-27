@@ -163,4 +163,53 @@ class WhatsAppController extends Controller
             $user->save();
         }
     }
+
+    private function processOCR($from, $mediaUrl)
+    {
+        $imageContent = $this->downloadMedia($mediaUrl);
+        if ($imageContent === false) {
+            $this->sendMessage($from, 'Failed to download media');
+            $this->setUserState($from, null);
+            return;
+        }
+
+        $imagePath = 'uploads/' . uniqid() . '.jpg';
+        Storage::disk('public')->put($imagePath, $imageContent);
+        $fullImagePath = storage_path("app/public/{$imagePath}");
+
+        $ocrResult = $this->ocrService->recognizeText($fullImagePath);
+
+        if (!empty($ocrResult['responses'][0]['fullTextAnnotation']['text'])) {
+            $detectedText = $ocrResult['responses'][0]['fullTextAnnotation']['text'];
+            $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
+        } else {
+            $responseMessage = "Tidak ada teks yang terdeteksi pada gambar.";
+        }
+
+        $this->sendMessage($from, $responseMessage);
+        $this->setUserState($from, null);
+    }
+
+    private function processParkingLocation($from, $latitude, $longitude)
+    {
+        $responseMessage = "Koordinat lokasi yang Anda kirim adalah:\nLatitude: $latitude\nLongitude: $longitude\n(Implementasikan fungsi pencarian lahan parkir di sini)";
+        $this->sendMessage($from, $responseMessage);
+        $this->setUserState($from, null);
+    }
+
+    private function downloadMedia($mediaUrl)
+    {
+        try {
+            $response = Http::withBasicAuth(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'))->timeout(30)->get($mediaUrl);
+
+            if ($response->successful() && $response->header('Content-Type') !== 'application/xml') {
+                return $response->body();
+            } else {
+                throw new \Exception('Invalid media content type or request failed');
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in downloadMedia', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
 }
