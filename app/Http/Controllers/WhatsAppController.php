@@ -140,6 +140,10 @@ class WhatsAppController extends Controller
 
     private function isUserRegistered($phoneNumber)
     {
+        // Menghapus awalan 'whatsapp:'
+        $phoneNumber = str_replace('whatsapp:', '', $phoneNumber);
+
+        // Cari pengguna dengan nomor telepon yang telah dinormalisasi
         return User::where('phone_number', $phoneNumber)->exists();
     }
 
