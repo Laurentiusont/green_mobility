@@ -268,8 +268,6 @@ class WhatsAppController extends Controller
             $patterns = [
                 '/TOTAL\s*:\s*Rp\.\s*([\d,.]+)/i',
                 '/Total\s+Rp\.\s*([\d,.]+)/i',
-                '/Grand\s*Total\s*:\s*Rp\.\s*([\d,.]+)/i',
-                '/Subtotal\s*:\s*Rp\.\s*([\d,.]+)/i',
                 '/Total\s*:\s*([\d,.]+)/i', // Menangani format tanpa "Rp."
                 '/Total\s*([\d,.]+)/i',    // Menangani format tanpa ": Rp."
             ];
