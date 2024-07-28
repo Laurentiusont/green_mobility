@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('google_id')->nullable();
             $table->string('email')->unique();
             $table->string('phone_number')->nullable();
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
             $table->string('country')->nullable();
             $table->enum('role', ['user', 'admin', 'merchant'])->default('user');
             $table->string('status')->nullable();

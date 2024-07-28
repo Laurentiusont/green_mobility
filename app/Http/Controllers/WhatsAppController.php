@@ -259,6 +259,22 @@ class WhatsAppController extends Controller
         if (!empty($ocrResult['responses'][0]['fullTextAnnotation']['text'])) {
             $detectedText = $ocrResult['responses'][0]['fullTextAnnotation']['text'];
             $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
+
+            // Tambahkan logika regex di sini
+            preg_match('/TOTAL\s*:\s*Rp\.\s*([\d,.]+)/i', $detectedText, $matches);
+
+            if (!empty($matches)) {
+                // Ambil angka yang cocok
+                $numberWithCommas = $matches[1];
+
+                // Hapus koma dan titik
+                $total = str_replace([',', '.'], '', $numberWithCommas);
+
+                // Tambahkan pesan ke hasil
+                $responseMessage .= "\nTotal yang terdeteksi: " . $total;
+            } else {
+                $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
+            }
         } else {
             $responseMessage = "Tidak ada teks yang terdeteksi pada gambar.";
         }
