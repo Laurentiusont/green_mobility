@@ -168,6 +168,8 @@ class WhatsAppController extends Controller
 
             $formattedPhoneNumber = $phoneUtil->format($numberProto, PhoneNumberFormat::NATIONAL);
 
+            $formattedPhoneNumber = preg_replace('/[^0-9]/', '', $formattedPhoneNumber);
+
             $formattedPhoneNumber = '0' . ltrim($formattedPhoneNumber, '0');
 
             Log::info('Phone number formatted', [
