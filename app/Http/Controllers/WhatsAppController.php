@@ -170,6 +170,12 @@ class WhatsAppController extends Controller
 
             $formattedPhoneNumber = '0' . ltrim($formattedPhoneNumber, '0');
 
+            Log::info('Phone number formatted', [
+                'original' => $phoneNumber,
+                'formatted' => $formattedPhoneNumber,
+                'country_code' => $countryCode
+            ]);
+
             return $formattedPhoneNumber;
         } catch (NumberParseException $e) {
             Log::error('Error parsing phone number', ['error' => $e->getMessage()]);
