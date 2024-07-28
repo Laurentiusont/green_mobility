@@ -111,9 +111,9 @@ class WhatsAppController extends Controller
     private function calculateCarbonEmission($vehicleType, $distance)
     {
         $emissionRates = [
-            'mobil' => 0.21, // kg CO2 per km
-            'motor' => 0.1,  // kg CO2 per km
-            'bus' => 0.27    // kg CO2 per km
+            'mobil' => 0.21,
+            'motor' => 0.1,
+            'bus' => 0.27
         ];
 
         if (array_key_exists($vehicleType, $emissionRates)) {
@@ -125,8 +125,7 @@ class WhatsAppController extends Controller
 
     private function sendMenu($to)
     {
-        $menuMessage = "Silakan pilih salah satu opsi berikut:\n1. Carbon Emission Calculator\n2. OCR Upload Receipt\n3. Mencari Lahan Parkir berdasarkan share lokasi";
-        $this->sendMessage($to, $menuMessage);
+        $this->sendInteractiveMessage($to);
     }
 
     private function sendMessage($to, $message)
@@ -135,6 +134,56 @@ class WhatsAppController extends Controller
         $twilio->messages->create($to, [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
             'body' => $message
+        ]);
+    }
+
+    private function sendInteractiveMessage($to)
+    {
+        $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
+        $twilio->messages->create($to, [
+            'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
+            'content_type' => 'application/json',
+            'content' => json_encode([
+                'type' => 'interactive',
+                'interactive' => [
+                    'type' => 'list',
+                    'header' => [
+                        'type' => 'text',
+                        'text' => 'Menu Utama'
+                    ],
+                    'body' => [
+                        'text' => 'Silakan pilih salah satu opsi berikut:'
+                    ],
+                    'footer' => [
+                        'text' => 'Pilih opsi yang diinginkan'
+                    ],
+                    'action' => [
+                        'button' => 'Pilih Opsi',
+                        'sections' => [
+                            [
+                                'title' => 'Pilihan',
+                                'rows' => [
+                                    [
+                                        'id' => 'carbon_calculator',
+                                        'title' => 'Carbon Emission Calculator',
+                                        'description' => 'Menghitung estimasi emisi karbon.'
+                                    ],
+                                    [
+                                        'id' => 'ocr_upload',
+                                        'title' => 'OCR Upload Receipt',
+                                        'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
+                                    ],
+                                    [
+                                        'id' => 'parking_location',
+                                        'title' => 'Mencari Lahan Parkir',
+                                        'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ])
         ]);
     }
 
