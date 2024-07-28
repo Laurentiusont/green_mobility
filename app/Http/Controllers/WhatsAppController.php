@@ -125,7 +125,8 @@ class WhatsAppController extends Controller
 
     private function sendMenu($to)
     {
-        $this->sendInteractiveMessage($to);
+        $menuMessage = "Silakan pilih salah satu opsi berikut:\n1. Carbon Emission Calculator\n2. OCR Upload Receipt\n3. Mencari Lahan Parkir berdasarkan share lokasi";
+        $this->sendMessage($to, $menuMessage);
     }
 
     private function sendMessage($to, $message)
@@ -135,63 +136,6 @@ class WhatsAppController extends Controller
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
             'body' => $message
         ]);
-    }
-
-    private function sendInteractiveMessage($to)
-    {
-        $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
-
-        Log::info('Sending message to', ['to' => $to]);
-
-        $messageData = [
-            'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-            'interactive' => [
-                'type' => 'list',
-                'header' => [
-                    'type' => 'text',
-                    'text' => 'Menu Utama'
-                ],
-                'body' => [
-                    'text' => 'Silakan pilih salah satu opsi berikut:'
-                ],
-                'footer' => [
-                    'text' => 'Pilih opsi yang diinginkan'
-                ],
-                'action' => [
-                    'button' => 'Pilih Opsi',
-                    'sections' => [
-                        [
-                            'title' => 'Pilihan',
-                            'rows' => [
-                                [
-                                    'id' => 'carbon_calculator',
-                                    'title' => 'Carbon Emission Calculator',
-                                    'description' => 'Menghitung estimasi emisi karbon.'
-                                ],
-                                [
-                                    'id' => 'ocr_upload',
-                                    'title' => 'OCR Upload Receipt',
-                                    'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
-                                ],
-                                [
-                                    'id' => 'parking_location',
-                                    'title' => 'Mencari Lahan Parkir',
-                                    'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
-
-        Log::info('Sending interactive message', ['messageData' => $messageData]);
-
-        try {
-            $twilio->messages->create($to, $messageData);
-        } catch (\Exception $e) {
-            Log::error('Error sending interactive message', ['error' => $e->getMessage()]);
-        }
     }
 
     private function isUserRegistered($phoneNumber)
