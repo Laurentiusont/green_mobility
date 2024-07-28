@@ -55,9 +55,9 @@ class WhatsAppController extends Controller
                 $latitude = $request->input('Latitude');
                 $longitude = $request->input('Longitude');
                 if ($latitude && $longitude) {
-                    $from = str_replace('whatsapp:', '', $from);
-                    $formattedPhoneNumber = $this->formatPhoneNumberToLocal($from);
-                    $user = User::where('phone_number', $from)->orWhere('phone_number', $formattedPhoneNumber)->first();
+                    $fromClean = str_replace('whatsapp:', '', $from);
+                    $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
+                    $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
                     $user->latitude = $latitude;
                     $user->longitude = $longitude;
                     $user->status = 'awaiting_radius';
@@ -70,9 +70,9 @@ class WhatsAppController extends Controller
             case 'awaiting_radius':
                 if (is_numeric($body)) {
                     $radius = (float)$body;
-                    $from = str_replace('whatsapp:', '', $from);
-                    $formattedPhoneNumber = $this->formatPhoneNumberToLocal($from);
-                    $user = User::where('phone_number', $from)->orWhere('phone_number', $formattedPhoneNumber)->first();
+                    $fromClean = str_replace('whatsapp:', '', $from);
+                    $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
+                    $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
                     $latitude = $user->latitude;
                     $longitude = $user->longitude;
                     $parkingLots = $this->findParkingLotsWithinRadius($latitude, $longitude, $radius);
