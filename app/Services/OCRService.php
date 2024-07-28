@@ -2,15 +2,27 @@
 
 namespace App\Services;
 
-use thiagoalessio\TesseractOCR\TesseractOCR;
+use Illuminate\Support\Facades\Http;
 
 class OCRService
 {
     public function recognizeText($imagePath)
     {
-        $ocr = new TesseractOCR($imagePath);
-        $text = $ocr->run();
+        $apiKey = env('OCR_SPACE_API_KEY');
+        $response = Http::attach(
+            'file',
+            file_get_contents($imagePath),
+            basename($imagePath)
+        )->post('https://api.ocr.space/parse/image', [
+            'apikey' => $apiKey,
+            'language' => 'eng',
+        ]);
 
-        return ['text' => $text];
+        $data = $response->json();
+        if ($data['IsErroredOnProcessing']) {
+            throw new \Exception($data['ErrorMessage'][0]);
+        }
+
+        return ['text' => $data['ParsedResults'][0]['ParsedText']];
     }
 }
