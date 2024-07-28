@@ -134,7 +134,8 @@ class WhatsAppController extends Controller
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
         $twilio->messages->create($to, [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-            'body' => $message
+            "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5",
+            // 'body' => $message
         ]);
     }
 
