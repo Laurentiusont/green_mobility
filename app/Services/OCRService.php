@@ -16,7 +16,7 @@ class OCRService
         )->post('https://api.ocr.space/parse/image', [
             'apikey' => $apiKey,
             'language' => 'eng',
-            'isTable' => true, // Menambahkan parameter isTable
+            'isTable' => 'true', // Menambahkan parameter isTable
             'OCREngine' => 2,  // Menambahkan parameter OCREngine
         ]);
 
