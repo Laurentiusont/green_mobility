@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use libphonenumber\PhoneNumberUtil;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\NumberParseException;
 use Twilio\Rest\Client;
 
 class WhatsAppController extends Controller
@@ -150,8 +153,28 @@ class WhatsAppController extends Controller
         // Menghapus awalan 'whatsapp:'
         $phoneNumber = str_replace('whatsapp:', '', $phoneNumber);
 
+        $formattedPhoneNumber = $this->formatPhoneNumberToLocal($phoneNumber);
         // Cari pengguna dengan nomor telepon yang telah dinormalisasi
-        return User::where('phone_number', $phoneNumber)->exists();
+        return User::where('phone_number', $phoneNumber)->orWhere('phone_number', $formattedPhoneNumber)->exists();
+    }
+
+    private function formatPhoneNumberToLocal($phoneNumber)
+    {
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        try {
+            $numberProto = $phoneUtil->parse($phoneNumber);
+
+            $countryCode = $phoneUtil->getRegionCodeForNumber($numberProto);
+
+            $formattedPhoneNumber = $phoneUtil->format($numberProto, PhoneNumberFormat::NATIONAL);
+
+            $formattedPhoneNumber = '0' . ltrim($formattedPhoneNumber, '0');
+
+            return $formattedPhoneNumber;
+        } catch (NumberParseException $e) {
+            Log::error('Error parsing phone number', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 
     private function getUserState($from)

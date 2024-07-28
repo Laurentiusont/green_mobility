@@ -20,6 +20,7 @@
         "laravel/ui": "^4.1",
         "mailjet/laravel-mailjet": "^3.0",
         "php-open-source-saver/jwt-auth": "^2.2",
+        "propaganistas/laravel-phone": "^5.3",
         "ramsey/uuid": "^4.7",
         "revolution/laravel-google-sheets": "^6.3",
         "spatie/laravel-permission": "^6.3",
