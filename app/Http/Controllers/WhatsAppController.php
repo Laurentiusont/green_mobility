@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ParkingLot;
 use App\Models\User;
 use App\Services\OCRService;
 use Illuminate\Http\Request;
@@ -54,9 +55,46 @@ class WhatsAppController extends Controller
                 $latitude = $request->input('Latitude');
                 $longitude = $request->input('Longitude');
                 if ($latitude && $longitude) {
-                    $this->processParkingLocation($from, $latitude, $longitude);
+                    $user = User::where('phone_number', str_replace('whatsapp:', '', $from))->first();
+                    $user->latitude = $latitude;
+                    $user->longitude = $longitude;
+                    $user->status = 'awaiting_radius';
+                    $user->save();
+                    $this->sendMessage($from, 'Silakan masukkan radius pencarian dalam kilometer:');
                 } else {
                     $this->sendMessage($from, 'Silakan bagikan lokasi Anda untuk mencari lahan parkir.');
+                }
+                break;
+            case 'awaiting_radius':
+                if (is_numeric($body)) {
+                    $radius = (float)$body;
+                    $user = User::where('phone_number', str_replace('whatsapp:', '', $from))->first();
+                    $latitude = $user->latitude;
+                    $longitude = $user->longitude;
+                    $parkingLots = $this->findParkingLotsWithinRadius($latitude, $longitude, $radius);
+
+                    if ($parkingLots->isNotEmpty()) {
+                        $responseMessage = "Lahan parkir terdekat dalam radius {$radius} km:\n";
+
+                        foreach ($parkingLots as $lot) {
+                            $mapsLink = "https://www.google.com/maps/search/?api=1&query={$lot->latitude},{$lot->longitude}";
+                            $responseMessage .= "\nNama: {$lot->name}\n" .
+                                "Lokasi: {$lot->city}, {$lot->country}\n" .
+                                "Jumlah tempat tersedia: {$lot->available_spots}\n" .
+                                "Telepon: {$lot->phone_number}\n" .
+                                "Google Maps: {$mapsLink}\n";
+                        }
+                    } else {
+                        $responseMessage = "Tidak ada lahan parkir yang ditemukan dalam radius {$radius} km dari lokasi Anda.";
+                    }
+
+                    $this->sendMessage($from, $responseMessage);
+                    $user->status = null;
+                    $user->latitude = null;
+                    $user->longitude = null;
+                    $user->save();
+                } else {
+                    $this->sendMessage($from, 'Silakan masukkan radius yang valid dalam kilometer:');
                 }
                 break;
             case 'carbon_calculator':
@@ -72,6 +110,7 @@ class WhatsAppController extends Controller
 
     private function handleMenuSelection($from, $body)
     {
+        $user = User::where('phone_number', str_replace('whatsapp:', '', $from))->first();
         switch ($body) {
             case 'Carbon Calculator':
                 $this->sendMessage($from, 'Anda memilih Carbon Emission Calculator. Ketik jenis kendaraan Anda (mobil, motor, bus) dan jarak tempuh dalam km. Contoh: mobil 15');
@@ -128,15 +167,8 @@ class WhatsAppController extends Controller
 
     private function sendMenu($to)
     {
-        $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
-        $twilio->messages->create(
-            $to,
-            [
-                "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5",
-                "from" => "whatsapp:" . env('TWILIO_WHATSAPP_NUMBER'),
-                "messagingServiceSid" => env('TWILIO_MESSAGING_SERVICE_SID'), // optional, jika menggunakan messaging service
-            ]
-        );
+        $message = "Menu:\n1. Mencari Lahan Parkir\n2. Carbon Calculator\n3. OCR Upload Receipt\nKetik pilihan Anda:";
+        $this->sendMessage($to, $message);
     }
 
     private function sendMessage($to, $message)
@@ -150,11 +182,9 @@ class WhatsAppController extends Controller
 
     private function isUserRegistered($phoneNumber)
     {
-        // Menghapus awalan 'whatsapp:'
         $phoneNumber = str_replace('whatsapp:', '', $phoneNumber);
 
         $formattedPhoneNumber = $this->formatPhoneNumberToLocal($phoneNumber);
-        // Cari pengguna dengan nomor telepon yang telah dinormalisasi
         return User::where('phone_number', $phoneNumber)->orWhere('phone_number', $formattedPhoneNumber)->exists();
     }
 
@@ -228,11 +258,24 @@ class WhatsAppController extends Controller
         $this->setUserState($from, null);
     }
 
-    private function processParkingLocation($from, $latitude, $longitude)
+    private function findParkingLotsWithinRadius($latitude, $longitude, $radius)
     {
-        $responseMessage = "Koordinat lokasi yang Anda kirim adalah:\nLatitude: $latitude\nLongitude: $longitude\n(Implementasikan fungsi pencarian lahan parkir di sini)";
-        $this->sendMessage($from, $responseMessage);
-        $this->setUserState($from, null);
+        $distanceFormula = "
+            (6371 * acos(
+                cos(radians(?)) *
+                cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) *
+                sin(radians(latitude))
+            ))
+        ";
+
+        return ParkingLot::table('parking_lots')
+            ->select('*')
+            ->selectRaw("{$distanceFormula} AS distance", [$latitude, $longitude, $latitude])
+            ->having('distance', '<', $radius)
+            ->orderBy('distance')
+            ->get();
     }
 
     private function downloadMedia($mediaUrl)
