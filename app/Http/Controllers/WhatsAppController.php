@@ -264,17 +264,23 @@ class WhatsAppController extends Controller
             $detectedText = $ocrResult['responses'][0]['fullTextAnnotation']['text'];
             $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
 
-            // Tambahkan logika regex di sini
-            preg_match('/TOTAL\s*:\s*Rp\.\s*([\d,.]+)/i', $detectedText, $matches);
+            // Logika regex yang lebih kompleks
+            $patterns = [
+                '/TOTAL\s*:\s*Rp\.\s*([\d,.]+)/i',
+                '/Total\s+Rp\.\s*([\d,.]+)/i',
+                '/Grand\s*Total\s*:\s*Rp\.\s*([\d,.]+)/i',
+                '/Subtotal\s*:\s*Rp\.\s*([\d,.]+)/i',
+            ];
+            $total = null;
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $detectedText, $matches)) {
+                    $numberWithCommas = $matches[1];
+                    $total = str_replace([',', '.'], '', $numberWithCommas);
+                    break;
+                }
+            }
 
-            if (!empty($matches)) {
-                // Ambil angka yang cocok
-                $numberWithCommas = $matches[1];
-
-                // Hapus koma dan titik
-                $total = str_replace([',', '.'], '', $numberWithCommas);
-
-                // Tambahkan pesan ke hasil
+            if ($total) {
                 $responseMessage .= "\nTotal yang terdeteksi: " . $total;
             } else {
                 $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
