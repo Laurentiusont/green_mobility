@@ -140,52 +140,40 @@ class WhatsAppController extends Controller
     private function sendInteractiveMessage($to)
     {
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
-        $twilio->messages->create($to, [
+
+        $twilio->messages->create("whatsapp:{$to}", [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-            'content_type' => 'application/json',
-            'content' => json_encode([
-                'type' => 'interactive',
-                'interactive' => [
-                    'type' => 'list',
-                    'header' => [
-                        'type' => 'text',
-                        'text' => 'Menu Utama'
-                    ],
-                    'body' => [
-                        'text' => 'Silakan pilih salah satu opsi berikut:'
-                    ],
-                    'footer' => [
-                        'text' => 'Pilih opsi yang diinginkan'
-                    ],
-                    'action' => [
-                        'button' => 'Pilih Opsi',
-                        'sections' => [
-                            [
-                                'title' => 'Pilihan',
-                                'rows' => [
-                                    [
-                                        'id' => 'carbon_calculator',
-                                        'title' => 'Carbon Emission Calculator',
-                                        'description' => 'Menghitung estimasi emisi karbon.'
-                                    ],
-                                    [
-                                        'id' => 'ocr_upload',
-                                        'title' => 'OCR Upload Receipt',
-                                        'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
-                                    ],
-                                    [
-                                        'id' => 'parking_location',
-                                        'title' => 'Mencari Lahan Parkir',
-                                        'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
-                                    ]
+            'body' => 'Silakan pilih salah satu opsi berikut:',
+            'persistent_action' => [
+                'action' => [
+                    'button' => 'Pilih Opsi',
+                    'sections' => [
+                        [
+                            'title' => 'Pilihan',
+                            'rows' => [
+                                [
+                                    'id' => 'carbon_calculator',
+                                    'title' => 'Carbon Emission Calculator',
+                                    'description' => 'Menghitung estimasi emisi karbon.'
+                                ],
+                                [
+                                    'id' => 'ocr_upload',
+                                    'title' => 'OCR Upload Receipt',
+                                    'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
+                                ],
+                                [
+                                    'id' => 'parking_location',
+                                    'title' => 'Mencari Lahan Parkir',
+                                    'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
                                 ]
                             ]
                         ]
                     ]
                 ]
-            ])
+            ]
         ]);
     }
+
 
     private function isUserRegistered($phoneNumber)
     {
