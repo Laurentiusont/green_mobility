@@ -179,8 +179,6 @@ class WhatsAppController extends Controller
         ]);
     }
 
-
-
     private function isUserRegistered($phoneNumber)
     {
         // Menghapus awalan 'whatsapp:'
