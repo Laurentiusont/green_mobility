@@ -262,14 +262,12 @@ class WhatsAppController extends Controller
 
         if (!empty($ocrResult['text'])) {
             $detectedText = $ocrResult['text'];
-            $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
+            // $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
 
-            // Logika regex yang lebih kompleks
+            // Logika regex yang lebih spesifik untuk hanya menangkap nilai total
             $patterns = [
-                '/TOTAL\s*:\s*Rp\.\s*([\d,.]+)/i',
-                '/Total\s+Rp\.\s*([\d,.]+)/i',
-                '/Total\s*:\s*([\d,.]+)/i', // Menangani format tanpa "Rp."
-                '/Total\s*([\d,.]+)/i',    // Menangani format tanpa ": Rp."
+                '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s*:\s*Rp\.?\s*([\d,.]+)/im', // Pola utama untuk menangkap "Total"
+                '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s*Rp\.?\s*([\d,.]+)/im',    // Pola alternatif tanpa ":"
             ];
             $total = null;
             foreach ($patterns as $pattern) {
@@ -281,9 +279,9 @@ class WhatsAppController extends Controller
             }
 
             if ($total) {
-                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 2, ',', '.');
+                $responseMessage = "\nTotal yang terdeteksi: Rp " . number_format($total, 2, ',', '.');
             } else {
-                $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
+                $responseMessage = "\nTidak ditemukan angka total yang cocok.";
             }
         } else {
             $responseMessage = "Tidak ada teks yang terdeteksi pada gambar.";
@@ -292,6 +290,7 @@ class WhatsAppController extends Controller
         $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
     }
+
 
 
     private function findParkingLotsWithinRadius($latitude, $longitude, $radius)
