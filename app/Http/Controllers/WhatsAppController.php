@@ -141,9 +141,6 @@ class WhatsAppController extends Controller
     {
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
 
-        // Pastikan nomor telepon diformat dengan benar
-        $to = 'whatsapp:' . preg_replace('/\s+/', '', $to);
-
         Log::info('Sending message to', ['to' => $to]);
 
         $twilio->messages->create($to, [
