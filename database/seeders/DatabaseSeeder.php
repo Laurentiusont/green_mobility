@@ -14,5 +14,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(MerchantMasterSeeder::class);
         $this->call(MerchantLocationSeeder::class);
+        $this->call(ParkingLotSeeder::class);
     }
 }
