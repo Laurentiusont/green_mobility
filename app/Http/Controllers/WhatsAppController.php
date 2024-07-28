@@ -141,7 +141,12 @@ class WhatsAppController extends Controller
     {
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
 
-        $twilio->messages->create("whatsapp:{$to}", [
+        // Pastikan nomor telepon diformat dengan benar
+        $to = 'whatsapp:' . preg_replace('/\s+/', '', $to);
+
+        Log::info('Sending message to', ['to' => $to]);
+
+        $twilio->messages->create($to, [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
             'body' => 'Silakan pilih salah satu opsi berikut:',
             'persistent_action' => [
@@ -173,6 +178,7 @@ class WhatsAppController extends Controller
             ]
         ]);
     }
+
 
 
     private function isUserRegistered($phoneNumber)
