@@ -145,41 +145,38 @@ class WhatsAppController extends Controller
 
         $messageData = [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-            'body' => 'Silakan pilih salah satu opsi berikut:',
-            'persistent_action' => [
-                [
-                    'type' => 'list',
-                    'header' => [
-                        'type' => 'text',
-                        'text' => 'Menu Utama'
-                    ],
-                    'body' => [
-                        'text' => 'Silakan pilih salah satu opsi berikut:'
-                    ],
-                    'footer' => [
-                        'text' => 'Pilih opsi yang diinginkan'
-                    ],
-                    'action' => [
-                        'button' => 'Pilih Opsi',
-                        'sections' => [
-                            [
-                                'title' => 'Pilihan',
-                                'rows' => [
-                                    [
-                                        'id' => 'carbon_calculator',
-                                        'title' => 'Carbon Emission Calculator',
-                                        'description' => 'Menghitung estimasi emisi karbon.'
-                                    ],
-                                    [
-                                        'id' => 'ocr_upload',
-                                        'title' => 'OCR Upload Receipt',
-                                        'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
-                                    ],
-                                    [
-                                        'id' => 'parking_location',
-                                        'title' => 'Mencari Lahan Parkir',
-                                        'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
-                                    ]
+            'interactive' => [
+                'type' => 'list',
+                'header' => [
+                    'type' => 'text',
+                    'text' => 'Menu Utama'
+                ],
+                'body' => [
+                    'text' => 'Silakan pilih salah satu opsi berikut:'
+                ],
+                'footer' => [
+                    'text' => 'Pilih opsi yang diinginkan'
+                ],
+                'action' => [
+                    'button' => 'Pilih Opsi',
+                    'sections' => [
+                        [
+                            'title' => 'Pilihan',
+                            'rows' => [
+                                [
+                                    'id' => 'carbon_calculator',
+                                    'title' => 'Carbon Emission Calculator',
+                                    'description' => 'Menghitung estimasi emisi karbon.'
+                                ],
+                                [
+                                    'id' => 'ocr_upload',
+                                    'title' => 'OCR Upload Receipt',
+                                    'description' => 'Unggah gambar tanda terima untuk diproses oleh OCR.'
+                                ],
+                                [
+                                    'id' => 'parking_location',
+                                    'title' => 'Mencari Lahan Parkir',
+                                    'description' => 'Bagikan lokasi Anda untuk mencari lahan parkir.'
                                 ]
                             ]
                         ]
@@ -189,7 +186,12 @@ class WhatsAppController extends Controller
         ];
 
         Log::info('Sending interactive message', ['messageData' => $messageData]);
-        $twilio->messages->create($to, $messageData);
+
+        try {
+            $twilio->messages->create($to, $messageData);
+        } catch (\Exception $e) {
+            Log::error('Error sending interactive message', ['error' => $e->getMessage()]);
+        }
     }
 
     private function isUserRegistered($phoneNumber)
