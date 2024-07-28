@@ -125,12 +125,6 @@ class WhatsAppController extends Controller
 
     private function sendMenu($to)
     {
-        $menuMessage = "Silakan pilih salah satu opsi berikut:\n1. Carbon Emission Calculator\n2. OCR Upload Receipt\n3. Mencari Lahan Parkir berdasarkan share lokasi";
-        $this->sendMessage($to, $menuMessage);
-    }
-
-    private function sendMessage($to, $message)
-    {
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
         $twilio->messages->create(
             $to,
@@ -140,6 +134,15 @@ class WhatsAppController extends Controller
                 "messagingServiceSid" => env('TWILIO_MESSAGING_SERVICE_SID'), // optional, jika menggunakan messaging service
             ]
         );
+    }
+
+    private function sendMessage($to, $message)
+    {
+        $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
+        $twilio->messages->create($to, [
+            'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
+            'body' => $message
+        ]);
     }
 
     private function isUserRegistered($phoneNumber)
