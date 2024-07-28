@@ -270,18 +270,20 @@ class WhatsAppController extends Controller
                 '/Total\s+Rp\.\s*([\d,.]+)/i',
                 '/Grand\s*Total\s*:\s*Rp\.\s*([\d,.]+)/i',
                 '/Subtotal\s*:\s*Rp\.\s*([\d,.]+)/i',
+                '/Total\s*:\s*([\d,.]+)/i', // Menangani format tanpa "Rp."
+                '/Total\s*([\d,.]+)/i',    // Menangani format tanpa ": Rp."
             ];
             $total = null;
             foreach ($patterns as $pattern) {
                 if (preg_match($pattern, $detectedText, $matches)) {
                     $numberWithCommas = $matches[1];
-                    $total = str_replace([',', '.'], '', $numberWithCommas);
+                    $total = str_replace(['.', ','], ['', '.'], $numberWithCommas); // Mengubah koma menjadi titik untuk format angka
                     break;
                 }
             }
 
             if ($total) {
-                $responseMessage .= "\nTotal yang terdeteksi: " . $total;
+                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 2, ',', '.');
             } else {
                 $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
             }
@@ -292,6 +294,7 @@ class WhatsAppController extends Controller
         $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
     }
+
 
     private function findParkingLotsWithinRadius($latitude, $longitude, $radius)
     {
