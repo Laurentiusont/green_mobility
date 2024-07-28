@@ -299,8 +299,7 @@ class WhatsAppController extends Controller
             ))
         ";
 
-        return ParkingLot::table('parking_lots')
-            ->select('*')
+        return ParkingLot::select('*')
             ->selectRaw("{$distanceFormula} AS distance", [$latitude, $longitude, $latitude])
             ->having('distance', '<', $radius)
             ->orderBy('distance')
