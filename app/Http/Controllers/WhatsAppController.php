@@ -132,11 +132,17 @@ class WhatsAppController extends Controller
     private function sendMessage($to, $message)
     {
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
-        $twilio->messages->create($to, [
-            'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
-            "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5",
-            // 'body' => $message
-        ]);
+        $twilio->messages->create(
+            "whatsapp:" . $to, // to
+            [
+                "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5", // contentSid Anda
+                "from" => "whatsapp:" . env('TWILIO_WHATSAPP_NUMBER'), // from
+                "contentVariables" => json_encode([
+                    "1" => "test", // variabel konten
+                ]),
+                "messagingServiceSid" => env('TWILIO_MESSAGING_SERVICE_SID'), // optional, jika menggunakan messaging service
+            ]
+        );
     }
 
     private function isUserRegistered($phoneNumber)
