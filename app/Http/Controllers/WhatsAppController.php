@@ -70,15 +70,15 @@ class WhatsAppController extends Controller
     private function handleMenuSelection($from, $body)
     {
         switch ($body) {
-            case '1':
+            case 'Carbon Calculator':
                 $this->sendMessage($from, 'Anda memilih Carbon Emission Calculator. Ketik jenis kendaraan Anda (mobil, motor, bus) dan jarak tempuh dalam km. Contoh: mobil 15');
                 $this->setUserState($from, 'carbon_calculator');
                 break;
-            case '2':
+            case 'OCR Upload Receipt':
                 $this->sendMessage($from, 'Silakan unggah gambar tanda terima untuk diproses oleh OCR.');
                 $this->setUserState($from, 'awaiting_image');
                 break;
-            case '3':
+            case 'Mencari Lahan Parkir':
                 $this->sendMessage($from, 'Silakan bagikan lokasi Anda untuk mencari lahan parkir.');
                 $this->setUserState($from, 'awaiting_location');
                 break;
@@ -135,11 +135,8 @@ class WhatsAppController extends Controller
         $twilio->messages->create(
             $to,
             [
-                "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5", // contentSid Anda
-                "from" => "whatsapp:" . env('TWILIO_WHATSAPP_NUMBER'), // from
-                "contentVariables" => json_encode([
-                    "1" => "test", // variabel konten
-                ]),
+                "contentSid" => "HXdb8be527cb8afbc187a8b241a7348ee5",
+                "from" => "whatsapp:" . env('TWILIO_WHATSAPP_NUMBER'),
                 "messagingServiceSid" => env('TWILIO_MESSAGING_SERVICE_SID'), // optional, jika menggunakan messaging service
             ]
         );
