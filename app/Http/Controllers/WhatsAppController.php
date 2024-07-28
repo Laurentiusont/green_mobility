@@ -225,14 +225,16 @@ class WhatsAppController extends Controller
     private function getUserState($from)
     {
         $from = str_replace('whatsapp:', '', $from);
-        $user = User::where('phone_number', $from)->first();
+        $formattedPhoneNumber = $this->formatPhoneNumberToLocal($from);
+        $user = User::where('phone_number', $from)->orWhere('phone_number', $formattedPhoneNumber)->first();
         return $user ? $user->status : null;
     }
 
     private function setUserState($from, $state)
     {
         $from = str_replace('whatsapp:', '', $from);
-        $user = User::where('phone_number', $from)->first();
+        $formattedPhoneNumber = $this->formatPhoneNumberToLocal($from);
+        $user = User::where('phone_number', $from)->orWhere('phone_number', $formattedPhoneNumber)->first();
         if ($user) {
             $user->status = $state;
             $user->save();
