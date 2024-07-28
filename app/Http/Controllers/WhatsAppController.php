@@ -260,8 +260,8 @@ class WhatsAppController extends Controller
 
         $ocrResult = $this->ocrService->recognizeText($fullImagePath);
 
-        if (!empty($ocrResult['responses'][0]['fullTextAnnotation']['text'])) {
-            $detectedText = $ocrResult['responses'][0]['fullTextAnnotation']['text'];
+        if (!empty($ocrResult['text'])) {
+            $detectedText = $ocrResult['text'];
             $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
 
             // Logika regex yang lebih kompleks
