@@ -264,21 +264,33 @@ class WhatsAppController extends Controller
             $detectedText = $ocrResult['text'];
             $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
 
-            // Logika regex yang lebih spesifik untuk hanya menangkap nilai total
             $patterns = [
-                '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im', // Pola utama untuk menangkap "Total" dengan angka setelahnya
+                '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im',
             ];
             $total = null;
             foreach ($patterns as $pattern) {
                 if (preg_match($pattern, $detectedText, $matches)) {
                     $numberWithCommas = $matches[1];
-                    $total = str_replace(['.', ','], ['', '.'], $numberWithCommas); // Mengubah koma menjadi titik untuk format angka
+                    $numberWithCommas = str_replace(',', '', $numberWithCommas);
+                    $total = floatval($numberWithCommas);
                     break;
                 }
             }
 
             if ($total) {
-                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 2, ',', '.');
+                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 0, ',', '.');
+                $fromClean = str_replace('whatsapp:', '', $from);
+                $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
+                $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
+
+                $pointHistory = new \App\Models\PointHistory([
+                    'total' => $total,
+                    'point' => $this->calculatePoints($total),
+                    'file_url' => $imagePath,
+                    'user_guid' => $user->guid,
+                    'status' => 'processed'
+                ]);
+                $pointHistory->save();
             } else {
                 $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
             }
@@ -288,6 +300,11 @@ class WhatsAppController extends Controller
 
         $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
+    }
+
+    private function calculatePoints($total)
+    {
+        return floor($total / 10000);
     }
 
 
