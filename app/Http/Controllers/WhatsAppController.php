@@ -262,7 +262,7 @@ class WhatsAppController extends Controller
 
         if (!empty($ocrResult['text'])) {
             $detectedText = $ocrResult['text'];
-            $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
+            //$responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
 
             $patterns = [
                 '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im',
