@@ -278,7 +278,7 @@ class WhatsAppController extends Controller
             }
 
             if ($total) {
-                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 0, ',', '.');
+                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 0, ',', '.') . "\n\nTotal point yang didapatkan: " . intdiv($total, 10000) . " point";
                 $fromClean = str_replace('whatsapp:', '', $from);
                 $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
                 $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
