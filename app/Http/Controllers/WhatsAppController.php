@@ -287,8 +287,7 @@ class WhatsAppController extends Controller
                     'total' => $total,
                     'point' => $this->calculatePoints($total),
                     'file_url' => $imagePath,
-                    'user_guid' => $user->guid,
-                    'status' => 'processed'
+                    'user_guid' => $user->guid
                 ]);
                 $pointHistory->save();
             } else {
