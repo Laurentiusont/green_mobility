@@ -32,7 +32,8 @@ class User extends Authenticatable implements JWTSubject
         'role',
         'status',
         'latitude',
-        'longitude'
+        'longitude',
+        'point'
     ];
 
     /**
