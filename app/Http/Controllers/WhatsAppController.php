@@ -354,10 +354,10 @@ class WhatsAppController extends Controller
 
     private function processStravaOCR($text, $from, $imagePath)
     {
-        $responseMessage = "";
+        $responseMessage = "OCR Text: \n" . $text . "\n\n";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
         $distancePattern = '/Distance\s+Time\s+Elev Gain\s+([\d.,]+)\s*km/i';
-        $runPattern =  '/Run\s+Pace\s+Time\s+([\d.,]+)\s*km/i';
+        $runPattern = '/Run\s+Pace\s+Time\s+([\d.,]+)\s*km/i';
         $rideDistance = null;
         $actualDistance = null;
         $runs = null;
@@ -373,20 +373,22 @@ class WhatsAppController extends Controller
         if (preg_match($distancePattern, $text, $matches)) {
             $actualDistance = str_replace(',', '.', $matches[1]);
             $actualDistance = floatval($actualDistance);
-            $responseMessage .= "Total distance detected: " . number_format($actualDistance, 0, '.', '') . " km\n";
+            $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
         }
 
         if (preg_match($runPattern, $text, $matches)) {
-            $runs = intval(str_replace(',', '', $matches[1]));
+            $runs = str_replace(',', '.', $matches[1]);
             $runs = floatval($runs);
-            $responseMessage .= "Total run distance detected: " . number_format($runs) . "\n";
+            $responseMessage .= "Total run distance detected: " . number_format($runs, 2, '.', '') . " km\n";
         }
 
         if ($rideDistance || $actualDistance || $runs) {
             $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $runs, $imagePath);
         } else {
-            $responseMessage .= "No ride, distance, or steps information found.\n";
+            $responseMessage .= "No ride, distance, or run information found.\n";
         }
+
+        $this->sendMessage($from, $responseMessage);
         return $responseMessage;
     }
 
@@ -397,10 +399,11 @@ class WhatsAppController extends Controller
         $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
 
         if ($user) {
-            $total = $rideDistance ? $rideDistance : ($runs ? $runs : 0);
-            Log::info($total);
+            $total = $rideDistance ? $rideDistance : ($runs ? $runs : ($actualDistance ? $actualDistance : 0));
             $point = $rideDistance ? ($total / 2) : $total;
-            Log::info($point);
+
+            Log::info('Total calculated:', ['total' => $total]);
+            Log::info('Points calculated:', ['point' => $point]);
 
             PointHistory::create([
                 'total' => $total,
@@ -410,6 +413,7 @@ class WhatsAppController extends Controller
             ]);
         }
     }
+
 
     // Method to store point history for Alfamart
     private function storePointHistory($from, $total, $file_url)
