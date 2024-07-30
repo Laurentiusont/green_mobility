@@ -270,7 +270,7 @@ class WhatsAppController extends Controller
         $responseMessage = ""; // Initialize the response message variable
         if (!empty($ocrResult['text'])) {
             $detectedText = $ocrResult['text'];
-            $responseMessage = "OCR Text: \n" . $detectedText . "\n\n";
+            // $responseMessage = "OCR Text: \n" . $detectedText . "\n\n";
 
             if (stripos($detectedText, 'alfamart') !== false) {
                 $responseMessage .= $this->processAlfamartOCR($detectedText, $from, $imagePath);
