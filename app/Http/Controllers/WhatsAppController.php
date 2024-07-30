@@ -355,7 +355,7 @@ class WhatsAppController extends Controller
     {
         $responseMessage = "";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
-        $distancePattern = '/Distance\s+([\d.,]+)\s*km/i';
+        $distancePattern = '/Distance\s+Time\s+Elev Gain\s+([\d.,]+)\s*km/i';
         $runPattern =  '/Run\s+Pace\s+Time\s+([\d.,]+)\s*km/i';
         $rideDistance = null;
         $actualDistance = null;
@@ -372,7 +372,7 @@ class WhatsAppController extends Controller
         if (preg_match($distancePattern, $text, $matches)) {
             $actualDistance = str_replace(',', '.', $matches[1]);
             $actualDistance = floatval($actualDistance);
-            $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
+            $responseMessage .= "Total distance detected: " . number_format($actualDistance, 0, '.', '') . " km\n";
         }
 
         if (preg_match($runPattern, $text, $matches)) {
