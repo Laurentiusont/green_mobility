@@ -267,6 +267,7 @@ class WhatsAppController extends Controller
 
         $ocrResult = $this->ocrService->recognizeText($fullImagePath);
 
+        $responseMessage = ""; // Initialize the response message variable
         if (!empty($ocrResult['text'])) {
             $detectedText = $ocrResult['text'];
             $responseMessage = "OCR Text: \n" . $detectedText . "\n\n";
@@ -282,6 +283,7 @@ class WhatsAppController extends Controller
             $responseMessage = "No text detected in the image.";
         }
 
+        // Ensure sendMessage is only called once
         $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
         return $responseMessage;
@@ -296,8 +298,6 @@ class WhatsAppController extends Controller
         $rideDistance = null;
         $actualDistance = null;
         $runs = null;
-
-        Log::info('Processing OCR text for Strava', ['text' => $text]);
 
         if (preg_match($ridePattern, $text, $matches)) {
             $rideDistance = str_replace(',', '.', $matches[1]);
@@ -344,6 +344,7 @@ class WhatsAppController extends Controller
             ]);
         }
     }
+
 
 
     // Method to process Alfamart OCR and store point history
