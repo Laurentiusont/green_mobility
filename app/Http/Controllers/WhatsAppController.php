@@ -46,7 +46,8 @@ class WhatsAppController extends Controller
             case 'awaiting_image':
                 $mediaUrl = $request->input('MediaUrl0');
                 if ($mediaUrl) {
-                    $this->processOCR($from, $mediaUrl);
+                    $responseMessage = $this->processOCR($from, $mediaUrl);
+                    $this->sendMessage($from, $responseMessage);
                 } else {
                     $this->sendMessage($from, 'Silakan unggah gambar tanda terima untuk diproses oleh OCR.');
                 }
@@ -184,6 +185,11 @@ class WhatsAppController extends Controller
 
     private function sendMessage($to, $message)
     {
+        if (empty($message)) {
+            Log::error('Failed to send message: Message body is empty');
+            return;
+        }
+
         $twilio = new Client(env('TWILIO_SID'), env('TWILIO_AUTH_TOKEN'));
         $twilio->messages->create($to, [
             'from' => 'whatsapp:' . env('TWILIO_WHATSAPP_NUMBER'),
@@ -251,7 +257,7 @@ class WhatsAppController extends Controller
         if ($imageContent === false) {
             $this->sendMessage($from, 'Failed to download media');
             $this->setUserState($from, null);
-            return;
+            return "Failed to download media.";
         }
 
         $imagePath = 'uploads/' . uniqid() . '.jpg';
@@ -265,9 +271,9 @@ class WhatsAppController extends Controller
             $responseMessage = "";
 
             if (stripos($detectedText, 'alfamart') !== false) {
-                $this->processAlfamartOCR($detectedText, $from, $imagePath);
+                $responseMessage = $this->processAlfamartOCR($detectedText, $from, $imagePath);
             } else if (stripos($detectedText, 'strava') !== false) {
-                $this->processStravaOCR($detectedText, $from, $imagePath);
+                $responseMessage = $this->processStravaOCR($detectedText, $from, $imagePath);
             } else {
                 $responseMessage = "No relevant keywords detected.";
             }
@@ -275,8 +281,8 @@ class WhatsAppController extends Controller
             $responseMessage = "No text detected in the image.";
         }
 
-        $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
+        return $responseMessage;
     }
 
     // Method to process Alfamart OCR and store point history
@@ -345,13 +351,27 @@ class WhatsAppController extends Controller
         }
     }
 
+    // Method to store point history for Alfamart
+    private function storePointHistory($from, $total, $file_url)
+    {
+        $fromClean = str_replace('whatsapp:', '', $from);
+        $user = User::where('phone_number', $fromClean)->first();
+
+        if ($user) {
+            $pointHistory = new \App\Models\PointHistory([
+                'total' => $total,
+                'point' => $this->calculatePoints($total),
+                'file_url' => $file_url,
+                'user_guid' => $user->guid
+            ]);
+            $pointHistory->save();
+        }
+    }
+
     private function calculatePoints($total)
     {
         return floor($total / 10000);
     }
-
-
-
 
     private function findParkingLotsWithinRadius($latitude, $longitude, $radius)
     {
