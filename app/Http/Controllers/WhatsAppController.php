@@ -398,7 +398,9 @@ class WhatsAppController extends Controller
 
         if ($user) {
             $total = $rideDistance ? $rideDistance : ($runs ? $runs : 0);
+            Log::info($total);
             $point = $rideDistance ? ($total / 2) : $total;
+            Log::info($point);
 
             PointHistory::create([
                 'total' => $total,
