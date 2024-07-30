@@ -284,7 +284,7 @@ class WhatsAppController extends Controller
         }
 
         // Ensure sendMessage is only called once
-        $this->sendMessage($from, $responseMessage);
+        // $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
         return $responseMessage;
     }
