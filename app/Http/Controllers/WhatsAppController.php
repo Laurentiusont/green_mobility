@@ -307,7 +307,7 @@ class WhatsAppController extends Controller
     {
         $responseMessage = "";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
-        $distancePattern = '/Distance\s+([\d.,]+)\s*km/i';
+        $distancePattern = '/Ride\s+Steps\s+Time\s+([\d.,]+)\s*km/i';
         $rideDistance = null;
         $actualDistance = null;
 
