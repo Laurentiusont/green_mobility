@@ -388,7 +388,6 @@ class WhatsAppController extends Controller
         return $responseMessage;
     }
 
-    // Method to store point history for Strava
     private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $steps, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
