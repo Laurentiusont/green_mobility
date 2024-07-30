@@ -400,7 +400,6 @@ class WhatsAppController extends Controller
             $pointHistory = new \App\Models\PointHistory([
                 'total' => $total,
                 'point' => floor($point),
-                'steps' => $steps, // Tambahkan informasi langkah jika ada
                 'file_url' => $file_url,
                 'user_guid' => $user->guid
             ]);
