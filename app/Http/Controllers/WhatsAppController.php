@@ -303,13 +303,65 @@ class WhatsAppController extends Controller
     }
 
     // Method to process Strava OCR and store point history
+    // private function processStravaOCR($text, $from, $imagePath)
+    // {
+    //     $responseMessage = "";
+    //     $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
+    //     $distancePattern = '/Ride\s+Steps\s+Time\s+([\d.,]+)\s*km/i';
+    //     $rideDistance = null;
+    //     $actualDistance = null;
+
+    //     if (preg_match($ridePattern, $text, $matches)) {
+    //         $rideDistance = str_replace(',', '.', $matches[1]);
+    //         $rideDistance = floatval($rideDistance);
+    //         $responseMessage .= "Total ride detected: " . number_format($rideDistance, 2, '.', '') . " km\n";
+    //     }
+
+    //     if (preg_match($distancePattern, $text, $matches)) {
+    //         $actualDistance = str_replace(',', '.', $matches[1]);
+    //         $actualDistance = floatval($actualDistance);
+    //         $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
+    //     }
+
+    //     if ($rideDistance || $actualDistance) {
+    //         $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $imagePath);
+    //     } else {
+    //         $responseMessage .= "No ride or distance information found.\n";
+    //     }
+    //     return $responseMessage;
+    // }
+
+    // // Method to store point history for Strava
+    // private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $file_url)
+    // {
+    //     $fromClean = str_replace('whatsapp:', '', $from);
+    //     $user = User::where('phone_number', $fromClean)->first();
+
+    //     if ($user) {
+    //         $total = $rideDistance ? $rideDistance : $actualDistance;
+    //         $point = $rideDistance ? ($total / 2) : ($total / 1);
+
+    //         $pointHistory = new \App\Models\PointHistory([
+    //             'total' => $total,
+    //             'point' => floor($point),
+    //             'file_url' => $file_url,
+    //             'user_guid' => $user->guid
+    //         ]);
+    //         $pointHistory->save();
+    //     }
+    // }
+
     private function processStravaOCR($text, $from, $imagePath)
     {
         $responseMessage = "";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
-        $distancePattern = '/Ride\s+Steps\s+Time\s+([\d.,]+)\s*km/i';
+        $distancePattern = '/Distance\s+([\d.,]+)\s*km/i';
+        $stepsPattern = '/Steps\s+([\d.,]+)/i'; // Pola untuk langkah
         $rideDistance = null;
         $actualDistance = null;
+        $steps = null;
+
+        Log::info('Processing OCR text for Strava', ['text' => $text]);
 
         if (preg_match($ridePattern, $text, $matches)) {
             $rideDistance = str_replace(',', '.', $matches[1]);
@@ -323,27 +375,33 @@ class WhatsAppController extends Controller
             $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
         }
 
-        if ($rideDistance || $actualDistance) {
-            $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $imagePath);
+        if (preg_match($stepsPattern, $text, $matches)) {
+            $steps = intval(str_replace(',', '', $matches[1]));
+            $responseMessage .= "Total steps detected: " . number_format($steps) . "\n";
+        }
+
+        if ($rideDistance || $actualDistance || $steps) {
+            $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $steps, $imagePath);
         } else {
-            $responseMessage .= "No ride or distance information found.\n";
+            $responseMessage .= "No ride, distance, or steps information found.\n";
         }
         return $responseMessage;
     }
 
     // Method to store point history for Strava
-    private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $file_url)
+    private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $steps, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
         $user = User::where('phone_number', $fromClean)->first();
 
         if ($user) {
-            $total = $rideDistance ? $rideDistance : $actualDistance;
-            $point = $rideDistance ? ($total / 2) : ($total / 1);
+            $total = $rideDistance ? $rideDistance : ($actualDistance ? $actualDistance : 0);
+            $point = $rideDistance ? ($total / 2) : $total;
 
             $pointHistory = new \App\Models\PointHistory([
                 'total' => $total,
                 'point' => floor($point),
+                'steps' => $steps, // Tambahkan informasi langkah jika ada
                 'file_url' => $file_url,
                 'user_guid' => $user->guid
             ]);
