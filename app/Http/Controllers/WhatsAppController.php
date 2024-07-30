@@ -245,7 +245,7 @@ class WhatsAppController extends Controller
         }
     }
 
-    private function processOCR($from, $mediaUrl)
+    public function processOCR($from, $mediaUrl)
     {
         $imageContent = $this->downloadMedia($mediaUrl);
         if ($imageContent === false) {
@@ -262,44 +262,87 @@ class WhatsAppController extends Controller
 
         if (!empty($ocrResult['text'])) {
             $detectedText = $ocrResult['text'];
-            $responseMessage = "Teks terdeteksi pada gambar:\n" . $detectedText;
-            // $responseMessage = "";
+            $responseMessage = "";
 
-            $patterns = [
-                '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im',
-            ];
-            $total = null;
-            foreach ($patterns as $pattern) {
-                if (preg_match($pattern, $detectedText, $matches)) {
-                    $numberWithCommas = $matches[1];
-                    $numberWithCommas = str_replace(',', '', $numberWithCommas);
-                    $total = floatval($numberWithCommas);
-                    break;
-                }
-            }
-
-            if ($total) {
-                $responseMessage .= "\nTotal yang terdeteksi: Rp " . number_format($total, 0, ',', '.') . "\n\nTotal point yang didapatkan: " . intdiv($total, 10000) . " point";
-                $fromClean = str_replace('whatsapp:', '', $from);
-                $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
-                $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
-
-                $pointHistory = new \App\Models\PointHistory([
-                    'total' => $total,
-                    'point' => $this->calculatePoints($total),
-                    'file_url' => $imagePath,
-                    'user_guid' => $user->guid
-                ]);
-                $pointHistory->save();
+            if (stripos($detectedText, 'alfamart') !== false) {
+                $this->processAlfamartOCR($detectedText, $from, $imagePath);
+            } else if (stripos($detectedText, 'strava') !== false) {
+                $this->processStravaOCR($detectedText, $from, $imagePath);
             } else {
-                $responseMessage .= "\nTidak ditemukan angka total yang cocok.";
+                $responseMessage = "No relevant keywords detected.";
             }
         } else {
-            $responseMessage = "Tidak ada teks yang terdeteksi pada gambar.";
+            $responseMessage = "No text detected in the image.";
         }
 
         $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
+    }
+
+    // Method to process Alfamart OCR and store point history
+    private function processAlfamartOCR($text, $from, $imagePath)
+    {
+        $pattern = '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im';
+        if (preg_match($pattern, $text, $matches)) {
+            $numberWithCommas = $matches[1];
+            $numberWithCommas = str_replace(',', '', $numberWithCommas);
+            $total = floatval($numberWithCommas);
+
+            $responseMessage = "Total detected: Rp " . number_format($total, 0, ',', '.') . "\nTotal points earned: " . $this->calculatePoints($total);
+            $this->storePointHistory($from, $total, $imagePath);
+        } else {
+            $responseMessage = "No matching total found.";
+        }
+        return $responseMessage;
+    }
+
+    // Method to process Strava OCR and store point history
+    private function processStravaOCR($text, $from, $imagePath)
+    {
+        $responseMessage = "";
+        $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
+        $distancePattern = '/Distance\s+([\d.,]+)\s*km/i';
+        $rideDistance = null;
+        $actualDistance = null;
+
+        if (preg_match($ridePattern, $text, $matches)) {
+            $rideDistance = str_replace(',', '.', $matches[1]);
+            $rideDistance = floatval($rideDistance);
+            $responseMessage .= "Total ride detected: " . number_format($rideDistance, 2, '.', '') . " km\n";
+        }
+
+        if (preg_match($distancePattern, $text, $matches)) {
+            $actualDistance = str_replace(',', '.', $matches[1]);
+            $actualDistance = floatval($actualDistance);
+            $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
+        }
+
+        if ($rideDistance || $actualDistance) {
+            $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $imagePath);
+        } else {
+            $responseMessage .= "No ride or distance information found.\n";
+        }
+        return $responseMessage;
+    }
+
+    // Method to store point history for Strava
+    private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $file_url)
+    {
+        $fromClean = str_replace('whatsapp:', '', $from);
+        $user = User::where('phone_number', $fromClean)->first();
+
+        if ($user) {
+            $total = $rideDistance ? $rideDistance : $actualDistance;
+            $point = $rideDistance ? ($total / 2) : ($total / 1);
+
+            $pointHistory = new \App\Models\PointHistory([
+                'total' => $total,
+                'point' => floor($point),
+                'file_url' => $file_url,
+                'user_guid' => $user->guid
+            ]);
+            $pointHistory->save();
+        }
     }
 
     private function calculatePoints($total)
