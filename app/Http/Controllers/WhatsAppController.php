@@ -356,10 +356,10 @@ class WhatsAppController extends Controller
         $responseMessage = "";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
         $distancePattern = '/Distance\s+([\d.,]+)\s*km/i';
-        $stepsPattern = '/Steps\s+([\d.,]+)/i'; // Pola untuk langkah
+        $runPattern =  '/Run\s+Pace\s+Time\s+([\d.,]+)\s*km/i';
         $rideDistance = null;
         $actualDistance = null;
-        $steps = null;
+        $runs = null;
 
         Log::info('Processing OCR text for Strava', ['text' => $text]);
 
@@ -375,26 +375,27 @@ class WhatsAppController extends Controller
             $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
         }
 
-        if (preg_match($stepsPattern, $text, $matches)) {
-            $steps = intval(str_replace(',', '', $matches[1]));
-            $responseMessage .= "Total steps detected: " . number_format($steps) . "\n";
+        if (preg_match($runPattern, $text, $matches)) {
+            $runs = intval(str_replace(',', '', $matches[1]));
+            $runs = floatval($runs);
+            $responseMessage .= "Total run distance detected: " . number_format($runs) . "\n";
         }
 
-        if ($rideDistance || $actualDistance || $steps) {
-            $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $steps, $imagePath);
+        if ($rideDistance || $actualDistance || $runs) {
+            $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $runs, $imagePath);
         } else {
             $responseMessage .= "No ride, distance, or steps information found.\n";
         }
         return $responseMessage;
     }
 
-    private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $steps, $file_url)
+    private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $runs, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
         $user = User::where('phone_number', $fromClean)->first();
 
         if ($user) {
-            $total = $rideDistance ? $rideDistance : ($actualDistance ? $actualDistance : 0);
+            $total = $rideDistance ? $rideDistance : ($runs ? $runs : 0);
             $point = $rideDistance ? ($total / 2) : $total;
 
             $pointHistory = new \App\Models\PointHistory([
