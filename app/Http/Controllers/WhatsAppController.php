@@ -393,7 +393,8 @@ class WhatsAppController extends Controller
     private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $runs, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
-        $user = User::where('phone_number', $fromClean)->first();
+        $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
+        $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
 
         if ($user) {
             $total = $rideDistance ? $rideDistance : ($runs ? $runs : 0);
@@ -412,7 +413,8 @@ class WhatsAppController extends Controller
     private function storePointHistory($from, $total, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
-        $user = User::where('phone_number', $fromClean)->first();
+        $formattedPhoneNumber = $this->formatPhoneNumberToLocal($fromClean);
+        $user = User::where('phone_number', $fromClean)->orWhere('phone_number', $formattedPhoneNumber)->first();
 
         if ($user) {
             PointHistory::create([
