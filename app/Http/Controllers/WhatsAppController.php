@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ParkingLot;
+use App\Models\PointHistory;
 use App\Models\User;
 use App\Services\OCRService;
 use Illuminate\Http\Request;
@@ -398,13 +399,12 @@ class WhatsAppController extends Controller
             $total = $rideDistance ? $rideDistance : ($runs ? $runs : 0);
             $point = $rideDistance ? ($total / 2) : $total;
 
-            $pointHistory = new \App\Models\PointHistory([
+            PointHistory::create([
                 'total' => $total,
                 'point' => floor($point),
                 'file_url' => $file_url,
                 'user_guid' => $user->guid
             ]);
-            $pointHistory->save();
         }
     }
 
@@ -415,13 +415,12 @@ class WhatsAppController extends Controller
         $user = User::where('phone_number', $fromClean)->first();
 
         if ($user) {
-            $pointHistory = new \App\Models\PointHistory([
+            PointHistory::create([
                 'total' => $total,
                 'point' => $this->calculatePoints($total),
                 'file_url' => $file_url,
                 'user_guid' => $user->guid
             ]);
-            $pointHistory->save();
         }
     }
 
