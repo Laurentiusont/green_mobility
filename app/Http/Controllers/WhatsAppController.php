@@ -272,89 +272,24 @@ class WhatsAppController extends Controller
             $responseMessage = "OCR Text: \n" . $detectedText . "\n\n";
 
             if (stripos($detectedText, 'alfamart') !== false) {
-                $responseMessage = $this->processAlfamartOCR($detectedText, $from, $imagePath);
+                $responseMessage .= $this->processAlfamartOCR($detectedText, $from, $imagePath);
             } else if (stripos($detectedText, 'strava') !== false) {
-                $responseMessage = $this->processStravaOCR($detectedText, $from, $imagePath);
+                $responseMessage .= $this->processStravaOCR($detectedText, $from, $imagePath);
             } else {
-                $responseMessage = "No relevant keywords detected.";
+                $responseMessage .= "No relevant keywords detected.";
             }
         } else {
             $responseMessage = "No text detected in the image.";
         }
 
+        $this->sendMessage($from, $responseMessage);
         $this->setUserState($from, null);
         return $responseMessage;
     }
 
-    // Method to process Alfamart OCR and store point history
-    private function processAlfamartOCR($text, $from, $imagePath)
-    {
-        $pattern = '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im';
-        if (preg_match($pattern, $text, $matches)) {
-            $numberWithCommas = $matches[1];
-            $numberWithCommas = str_replace(',', '', $numberWithCommas);
-            $total = floatval($numberWithCommas);
-
-            $responseMessage = "Total detected: Rp " . number_format($total, 0, ',', '.') . "\nTotal points earned: " . $this->calculatePoints($total);
-            $this->storePointHistory($from, $total, $imagePath);
-        } else {
-            $responseMessage = "No matching total found.";
-        }
-        return $responseMessage;
-    }
-
-    // Method to process Strava OCR and store point history
-    // private function processStravaOCR($text, $from, $imagePath)
-    // {
-    //     $responseMessage = "";
-    //     $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
-    //     $distancePattern = '/Ride\s+Steps\s+Time\s+([\d.,]+)\s*km/i';
-    //     $rideDistance = null;
-    //     $actualDistance = null;
-
-    //     if (preg_match($ridePattern, $text, $matches)) {
-    //         $rideDistance = str_replace(',', '.', $matches[1]);
-    //         $rideDistance = floatval($rideDistance);
-    //         $responseMessage .= "Total ride detected: " . number_format($rideDistance, 2, '.', '') . " km\n";
-    //     }
-
-    //     if (preg_match($distancePattern, $text, $matches)) {
-    //         $actualDistance = str_replace(',', '.', $matches[1]);
-    //         $actualDistance = floatval($actualDistance);
-    //         $responseMessage .= "Total distance detected: " . number_format($actualDistance, 2, '.', '') . " km\n";
-    //     }
-
-    //     if ($rideDistance || $actualDistance) {
-    //         $this->storeStravaPointHistory($from, $rideDistance, $actualDistance, $imagePath);
-    //     } else {
-    //         $responseMessage .= "No ride or distance information found.\n";
-    //     }
-    //     return $responseMessage;
-    // }
-
-    // // Method to store point history for Strava
-    // private function storeStravaPointHistory($from, $rideDistance, $actualDistance, $file_url)
-    // {
-    //     $fromClean = str_replace('whatsapp:', '', $from);
-    //     $user = User::where('phone_number', $fromClean)->first();
-
-    //     if ($user) {
-    //         $total = $rideDistance ? $rideDistance : $actualDistance;
-    //         $point = $rideDistance ? ($total / 2) : ($total / 1);
-
-    //         $pointHistory = new \App\Models\PointHistory([
-    //             'total' => $total,
-    //             'point' => floor($point),
-    //             'file_url' => $file_url,
-    //             'user_guid' => $user->guid
-    //         ]);
-    //         $pointHistory->save();
-    //     }
-    // }
-
     private function processStravaOCR($text, $from, $imagePath)
     {
-        $responseMessage = "OCR Text: \n" . $text . "\n\n";
+        $responseMessage = "";
         $ridePattern = '/Ride\s+Elev Gain\s+Time\s+([\d.,]+)\s*km/i';
         $distancePattern = '/Distance\s+Time\s+Elev Gain\s+([\d.,]+)\s*km/i';
         $runPattern = '/Run\s+Pace\s+Time\s+([\d.,]+)\s*km/i';
@@ -388,7 +323,6 @@ class WhatsAppController extends Controller
             $responseMessage .= "No ride, distance, or run information found.\n";
         }
 
-        $this->sendMessage($from, $responseMessage);
         return $responseMessage;
     }
 
@@ -402,9 +336,6 @@ class WhatsAppController extends Controller
             $total = $rideDistance ? $rideDistance : ($runs ? $runs : ($actualDistance ? $actualDistance : 0));
             $point = $rideDistance ? ($total / 2) : $total;
 
-            Log::info('Total calculated:', ['total' => $total]);
-            Log::info('Points calculated:', ['point' => $point]);
-
             PointHistory::create([
                 'total' => $total,
                 'point' => floor($point),
@@ -414,6 +345,23 @@ class WhatsAppController extends Controller
         }
     }
 
+
+    // Method to process Alfamart OCR and store point history
+    private function processAlfamartOCR($text, $from, $imagePath)
+    {
+        $pattern = '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im';
+        if (preg_match($pattern, $text, $matches)) {
+            $numberWithCommas = $matches[1];
+            $numberWithCommas = str_replace(',', '', $numberWithCommas);
+            $total = floatval($numberWithCommas);
+
+            $responseMessage = "Total detected: Rp " . number_format($total, 0, ',', '.') . "\nTotal points earned: " . $this->calculatePoints($total);
+            $this->storePointHistory($from, $total, $imagePath);
+        } else {
+            $responseMessage = "No matching total found.";
+        }
+        return $responseMessage;
+    }
 
     // Method to store point history for Alfamart
     private function storePointHistory($from, $total, $file_url)
