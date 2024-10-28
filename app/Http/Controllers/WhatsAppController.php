@@ -384,7 +384,7 @@ class WhatsAppController extends Controller
 
     private function calculatePoints($total)
     {
-        return floor($total / 10000);
+        return floor($total / 100);
     }
 
     private function findParkingLotsWithinRadius($latitude, $longitude, $radius)
