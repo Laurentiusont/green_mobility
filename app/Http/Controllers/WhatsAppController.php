@@ -272,8 +272,8 @@ class WhatsAppController extends Controller
             $detectedText = $ocrResult['text'];
             // $responseMessage = "OCR Text: \n" . $detectedText . "\n\n";
 
-            if (stripos($detectedText, 'alfamart') !== false) {
-                $responseMessage .= $this->processAlfamartOCR($detectedText, $from, $imagePath);
+            if (stripos($detectedText, 'parksphere') !== false) {
+                $responseMessage .= $this->processParksphereOCR($detectedText, $from, $imagePath);
             } else if (stripos($detectedText, 'strava') !== false) {
                 $responseMessage .= $this->processStravaOCR($detectedText, $from, $imagePath);
             } else {
@@ -347,10 +347,11 @@ class WhatsAppController extends Controller
 
 
 
-    // Method to process Alfamart OCR and store point history
-    private function processAlfamartOCR($text, $from, $imagePath)
+    // Method to process Parksphere OCR and store point history
+    private function processParksphereOCR($text, $from, $imagePath)
     {
-        $pattern = '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im';
+        // $pattern = '/^(?!.*(?:Subtotal|Total Diskon|A-Poin)).*Total\s+([\d,.]+)/im';
+        $pattern = '/Total\s*:\s*([0-9.,]+)/i';
         if (preg_match($pattern, $text, $matches)) {
             $numberWithCommas = $matches[1];
             $numberWithCommas = str_replace(',', '', $numberWithCommas);
@@ -364,7 +365,7 @@ class WhatsAppController extends Controller
         return $responseMessage;
     }
 
-    // Method to store point history for Alfamart
+    // Method to store point history for Parksphere
     private function storePointHistory($from, $total, $file_url)
     {
         $fromClean = str_replace('whatsapp:', '', $from);
